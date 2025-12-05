@@ -67,7 +67,8 @@ def svd_compress(image, k):
         (Number of stored parameters in image_k) / (m * n).
     """
     m = np.size(image)[0]
-    covMatrix = image.T @ image
+    covMatrix = image.T @ image # This sucks but there is a way around it... we might have to modify power method arguments... 
+    # TODO: See if we can get away with not computing A.T@A and running the power method on it...
     fNorm_img = np.sqrt(np.linalg.trace(covMatrix)) # Convenient since I have the covariance matrix already
 
     svList = []
