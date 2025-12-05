@@ -28,7 +28,19 @@ def power_method(A, x0, maxit, tol):
         Number of iterations performed.
     """
     # TODO: implement the power method
-    raise NotImplementedError("power_method not implemented")
+    x_current = x0
+    x_new = x0
+    for k in range(0,maxit):
+        x_new = A@x_current
+        mu = np.linalg.norm(x_new) # Standard Power Method eigenvalue
+        # mu = np.dot(x_new,x_current)/np.dot(x_current,x_current) Rayleigh Quotient
+        x_new = x_new/mu # A will always be symmetric here so mu should not be zero... TODO: consider a tolerance check here
+        if np.linalg.norm(x_new - x_current) < tol:
+            break
+    
+    return mu,x_new,k+1
+
+    #raise NotImplementedError("power_method not implemented")
 
 
 # =========================================================
@@ -54,8 +66,35 @@ def svd_compress(image, k):
     compression_ratio : float
         (Number of stored parameters in image_k) / (m * n).
     """
-    # TODO: implement SVD-based rank-k approximation
-    raise NotImplementedError("svd_compress not implemented")
+    m = np.size(image)[0]
+    covMatrix = image.T @ image
+    fNorm_img = np.sqrt(np.linalg.trace(covMatrix)) # Convenient since I have the covariance matrix already
+
+    svList = []
+    vecList = [] # TODO: I need to calculate the left/right singular vectors... find a formula and implement
+    for i in range(0,k):
+        maxIterations = 1000
+        tol = 1e-6
+        eig,eigVec,itnumber = power_method(covMatrix,covMatrix[:][0],maxIterations,tol) #TODO Determine max iterations and error tolerance
+        assert(itnumber < maxIterations) # I want to stop everything if I have questionable convergence
+
+        svList.append(np.sqrt(eig))
+        vecList.append(eigVec)
+
+        # Now we deflate
+        covMatrix = covMatrix - eig*(eigVec @ eigVec.T) # TODO: Think about if this effects speed? overwriting the memory over and over again??
+    image_k = svList[0]*(vecList[0])@vecList[0].T
+    for i in range(1,k):
+        image_k += svList[i]*(vecList[i])@vecList[i].T
+    
+    # Now that we have the imgApprox... compute its F norm... tedious... find something fast here?
+    fNorm_diff = np.sqrt( np.linalg.trace((image - image_k).T@(image - image_k)))
+    rel_error = fNorm_diff/fNorm_img
+
+    compression_ratio = k/m # TODO: Find out what is meant here... I got this from k vectors in R^n over m*n i.e. kn/mn
+    
+    return image_k,rel_error,compression_ratio
+    #raise NotImplementedError("svd_compress not implemented")
 
 
 # =========================================================
