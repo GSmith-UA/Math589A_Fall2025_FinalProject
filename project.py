@@ -174,10 +174,10 @@ def svd_features(image, p):
     for i in range(0,maxRank):
         runningEnergyTotal += singularValues[i]**2
         energyRatio = runningEnergyTotal/E_total
-        if (energyRatio > 0.98) and not(r_9set):
+        if (energyRatio > 0.9) and not(r_9set):
             r_9 = i+1
             r_9set = True
-        if (r_9set) and (energyRatio > 0.99) and not(r_95set):
+        if (r_9set) and (energyRatio > 0.95) and not(r_95set):
             r_95 = i+1
             r_95set = True
 
