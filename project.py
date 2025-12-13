@@ -162,7 +162,7 @@ def svd_features(image, p):
     missingValues = maxRank - len(singularValues)
     if missingValues > 0: # We must be rank deficient... pad with zeros...
         singularValues = singularValues + [0]*missingValues
-    
+
     sigmaSum = np.sum(singularValues)
     normalizeSigmas = np.array(singularValues)/sigmaSum
 
@@ -182,6 +182,14 @@ def svd_features(image, p):
             r_95set = True
 
     feat = normalizeSigmas[:p]
+
+    #### TEST BLOCK ####
+    alpha = 5.0
+    linearWeights = np.linspace(0,1,num=p)
+    W = 1 + alpha*linearWeights
+    feat = feat*W
+    #### TESTBLOCK ####
+
     feat = np.concatenate((feat,np.array([r_9])))
     feat = np.concatenate((feat,np.array([r_95])))
 
