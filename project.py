@@ -135,7 +135,6 @@ def svd_features(image, p):
         Feature vector consisting of:
         [normalized sigma_1, ..., normalized sigma_p, r_0.9, r_0.95]
     """
-    print("Running svd_features...")
     m,n = np.shape(image)
     covMatrix = image.T@image
     E_total = np.linalg.trace(covMatrix) # This is equiv to frobenius norm squared
