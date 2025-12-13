@@ -123,6 +123,7 @@ def svd_features(image, p):
         Feature vector consisting of:
         [normalized sigma_1, ..., normalized sigma_p, r_0.9, r_0.95]
     """
+    print("Running svd_features...")
     m,n = np.shape(image)
     covMatrix = image.T@image
     E_total = np.linalg.trace(covMatrix) # This is equiv to frobenius norm squared
@@ -130,7 +131,8 @@ def svd_features(image, p):
     singularValues = []
     rightVectors = []
 
-    maxIterations = 1000, powerTol = 1e-8
+    maxIterations = 1000
+    powerTol = 1e-9
 
     maxRank = min(m,n)
     k = 0
@@ -143,6 +145,7 @@ def svd_features(image, p):
         rightVectors.append(orthoVec) 
 
         covMatrix = covMatrix - eig*(orthoVec @ orthoVec.T)
+        k += 1
 
     missingValues = maxRank - len(singularValues)
     if missingValues > 0: # We must be rank deficient... pad with zeros...
@@ -151,8 +154,10 @@ def svd_features(image, p):
     sigmaSum = np.sum(singularValues)
     normalizeSigmas = np.array(singularValues)/sigmaSum
 
-    r_9,r_95 = maxRank
-    r_9set,r_95set = False
+    r_9 = maxRank
+    r_95 = maxRank
+    r_9set = False
+    r_95set = False
     runningEnergyTotal = 0
     for i in range(0,maxRank):
         runningEnergyTotal += singularValues[i]**2
@@ -253,7 +258,7 @@ def lda_predict(X, w, threshold):
     y_pred : (N,) ndarray
         Predicted labels (0 or 1).
     """
-    N = np.size(X)[0]
+    N = np.shape(X)[0]
     # We can compute all the projections using matrix mult
     Z = X@w # Z should be Nx1
     # Loop through and check... pre-filled with zeros so just fill in the needed ones
@@ -282,7 +287,7 @@ def orthogonalize_vector(new_vector, basis_list):
     corrected_vector : np.ndarray
         The orthonormal vector that is orthogonal to all vectors in basis_list.
     """
-    
+    # print("Running ortho vec....")
     # Start with a copy to avoid modifying the original input (eigVec)
     v = new_vector.copy() 
     
@@ -327,6 +332,20 @@ def _example_run():
     y_train = data["y_train"]
     X_test = data["X_test"]
     y_test = data["y_test"]
+
+    # #################################REMOVE
+    # N_TEST_SAMPLES = 100 # Define the number of images you want to use
+    
+    # # Subset Training Data (using the first N_TEST_SAMPLES images)
+    # X_train = X_train[:N_TEST_SAMPLES]
+    # y_train = y_train[:N_TEST_SAMPLES]
+    
+    # # Subset Testing Data (using the first N_TEST_SAMPLES images)
+    # X_test = X_test[:N_TEST_SAMPLES]
+    # y_test = y_test[:N_TEST_SAMPLES]
+    # #################################REMOVE
+    # print(f"--- Running Test with Subset of {N_TEST_SAMPLES} samples per set ---")
+
 
     # Sanity check shapes
     print("X_train shape:", X_train.shape)
