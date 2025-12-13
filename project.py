@@ -27,21 +27,33 @@ def power_method(A, x0, maxit, tol):
     iters : int
         Number of iterations performed.
     """
-    # TODO: implement the power method
-    x_current = x0
-    x_new = x0
-    for k in range(0,maxit):
-        x_new = A@x_current
-        # mu = np.linalg.norm(x_new) # Standard Power Method eigenvalue
-        mu = np.dot(x_new,x_current)/np.dot(x_current,x_current) # Rayleigh Quotient
-        x_new = x_new/mu # A will always be symmetric here so mu should not be zero... TODO: consider a tolerance check here
-        if np.linalg.norm(x_new - x_current) < tol:
-            break
-    
-    mu = np.dot(x_new,x_current)/np.dot(x_current,x_current) 
-    return mu,x_new,k+1
+    x_current = x0.copy()
+    norm = np.linalg.norm(x_current)
 
-    #raise NotImplementedError("power_method not implemented")
+    if norm < 1e-9: # If the start vector is close to the zero vector pick a new random vector
+        x_current = np.random.rand(A.shape[0])
+        norm = np.linalg.norm(x_current)
+
+    x_current = x_current/norm
+    lam_old = 0.0
+    iters = maxit
+
+    for k in range(0,maxit):
+        z = A @ x_current
+        lam_new = np.dot(x_current,z)
+        if np.abs(lam_new - lam_old) < tol*np.abs(lam_new): # Check to see how much the eigen value has changed
+            iters = k+1
+            break
+        
+        normZ = np.linalg.norm(z)
+        assert(np.abs(normZ) >=1e-12)
+        # if np.abs(normZ) < 1e-9: # Don't want div zero errors... We should never hit this though...
+        #     x_current = z
+        #     break 
+        x_current = z / normZ
+        lam_old = lam_new
+
+    return lam_new,x_current,iters
 
 
 # =========================================================
@@ -88,8 +100,8 @@ def svd_compress(image, k):
         vecList_Left.append((1/svList[i])*(image@orthoVec))        
 
         # Now we deflate
-        covMatrix = covMatrix - eig*(orthoVec @ orthoVec.T) # TODO: Think about if this effects speed? overwriting the memory over and over again??
-    image_k = svList[0]*(vecList_Left[0])@vecList[0].T
+        covMatrix = covMatrix - eig*np.outer(orthoVec,orthoVec) # TODO: Think about if this effects speed? overwriting the memory over and over again??
+    image_k = svList[0]*np.outer(vecList_Left[0],vecList[0])
     for i in range(1,k):
         image_k += svList[i]*(vecList_Left[i])@vecList[i].T
     
@@ -144,7 +156,7 @@ def svd_features(image, p):
         orthoVec = orthogonalize_vector(eigVec,rightVectors)
         rightVectors.append(orthoVec) 
 
-        covMatrix = covMatrix - eig*(orthoVec @ orthoVec.T)
+        covMatrix = covMatrix - eig*np.outer(orthoVec,orthoVec)
         k += 1
 
     missingValues = maxRank - len(singularValues)
