@@ -32,12 +32,13 @@ def power_method(A, x0, maxit, tol):
     x_new = x0
     for k in range(0,maxit):
         x_new = A@x_current
-        mu = np.linalg.norm(x_new) # Standard Power Method eigenvalue
-        # mu = np.dot(x_new,x_current)/np.dot(x_current,x_current) Rayleigh Quotient
+        # mu = np.linalg.norm(x_new) # Standard Power Method eigenvalue
+        mu = np.dot(x_new,x_current)/np.dot(x_current,x_current) # Rayleigh Quotient
         x_new = x_new/mu # A will always be symmetric here so mu should not be zero... TODO: consider a tolerance check here
         if np.linalg.norm(x_new - x_current) < tol:
             break
     
+    mu = np.dot(x_new,x_current)/np.dot(x_current,x_current) 
     return mu,x_new,k+1
 
     #raise NotImplementedError("power_method not implemented")
@@ -67,32 +68,36 @@ def svd_compress(image, k):
         (Number of stored parameters in image_k) / (m * n).
     """
     m = np.size(image)[0]
+    n = np.size(image)[1]
     covMatrix = image.T @ image # This sucks but there is a way around it... we might have to modify power method arguments... 
     # TODO: See if we can get away with not computing A.T@A and running the power method on it...
     fNorm_img = np.sqrt(np.linalg.trace(covMatrix)) # Convenient since I have the covariance matrix already
 
     svList = []
     vecList = [] # TODO: I need to calculate the left/right singular vectors... find a formula and implement
+    vecList_Left = []
     for i in range(0,k):
         maxIterations = 1000
         tol = 1e-6
         eig,eigVec,itnumber = power_method(covMatrix,covMatrix[:][0],maxIterations,tol) #TODO Determine max iterations and error tolerance
         assert(itnumber < maxIterations) # I want to stop everything if I have questionable convergence
 
-        svList.append(np.sqrt(eig))
-        vecList.append(eigVec)
+        svList.append(np.sqrt(eig))  
+        orthoVec = orthogonalize_vector(eigVec, vecList)
+        vecList.append(orthoVec)
+        vecList_Left.append((1/svList[i])*(image@orthoVec))        
 
         # Now we deflate
-        covMatrix = covMatrix - eig*(eigVec @ eigVec.T) # TODO: Think about if this effects speed? overwriting the memory over and over again??
-    image_k = svList[0]*(vecList[0])@vecList[0].T
+        covMatrix = covMatrix - eig*(orthoVec @ orthoVec.T) # TODO: Think about if this effects speed? overwriting the memory over and over again??
+    image_k = svList[0]*(vecList_Left[0])@vecList[0].T
     for i in range(1,k):
-        image_k += svList[i]*(vecList[i])@vecList[i].T
+        image_k += svList[i]*(vecList_Left[i])@vecList[i].T
     
     # Now that we have the imgApprox... compute its F norm... tedious... find something fast here?
     fNorm_diff = np.sqrt( np.linalg.trace((image - image_k).T@(image - image_k)))
     rel_error = fNorm_diff/fNorm_img
 
-    compression_ratio = k/m # TODO: Find out what is meant here... I got this from k vectors in R^n over m*n i.e. kn/mn
+    compression_ratio = k*(m+n+1)/(m*n) 
     
     return image_k,rel_error,compression_ratio
     #raise NotImplementedError("svd_compress not implemented")
@@ -118,8 +123,54 @@ def svd_features(image, p):
         Feature vector consisting of:
         [normalized sigma_1, ..., normalized sigma_p, r_0.9, r_0.95]
     """
-    # TODO: implement SVD feature extraction
-    raise NotImplementedError("svd_features not implemented")
+    m,n = np.shape(image)
+    covMatrix = image.T@image
+    E_total = np.linalg.trace(covMatrix) # This is equiv to frobenius norm squared
+
+    singularValues = []
+    rightVectors = []
+
+    maxIterations = 1000, powerTol = 1e-8
+
+    maxRank = min(m,n)
+    k = 0
+    while (k < maxRank): # Should compute the all possible singular values...
+        if (np.linalg.norm(covMatrix)) < 1e-9:
+            break
+        eig,eigVec,itnumber = power_method(covMatrix,covMatrix[:][0],maxIterations,powerTol)
+        singularValues.append(np.sqrt(eig))
+        orthoVec = orthogonalize_vector(eigVec,rightVectors)
+        rightVectors.append(orthoVec) 
+
+        covMatrix = covMatrix - eig*(orthoVec @ orthoVec.T)
+
+    missingValues = maxRank - len(singularValues)
+    if missingValues > 0: # We must be rank deficient... pad with zeros...
+        singularValues = singularValues + [0]*missingValues
+    
+    sigmaSum = np.sum(singularValues)
+    normalizeSigmas = np.array(singularValues)/sigmaSum
+
+    r_9,r_95 = maxRank
+    r_9set,r_95set = False
+    runningEnergyTotal = 0
+    for i in range(0,maxRank):
+        runningEnergyTotal += singularValues[i]**2
+        energyRatio = runningEnergyTotal/E_total
+        if (energyRatio > 0.9) and not(r_9set):
+            r_9 = i+1
+            r_9set = True
+        if (r_9set) and (energyRatio > 0.95) and not(r_95set):
+            r_95 = i+1
+            r_95set = True
+
+    feat = normalizeSigmas[:p]
+    feat = np.concatenate((feat,np.array([r_9])))
+    feat = np.concatenate((feat,np.array([r_95])))
+
+    return feat
+
+    # raise NotImplementedError("svd_features not implemented")
 
 
 # =========================================================
@@ -171,7 +222,52 @@ def lda_predict(X, w, threshold):
     # TODO: implement LDA prediction
     raise NotImplementedError("lda_predict not implemented")
 
+# =========================================================
+# 6. orthog checking...
+# =========================================================
+def orthogonalize_vector(new_vector, basis_list):
+    """
+    Orthogonalizes a new vector against an existing list of orthonormal basis vectors
+    (Modified Gram-Schmidt process, which is often more stable).
 
+    Parameters
+    ----------
+    new_vector : np.ndarray
+        The vector to be corrected (e.g., the eigenvector found by the Power Method).
+    basis_list : list of np.ndarrays
+        The existing list of orthonormal vectors (e.g., vecList).
+
+    Returns
+    -------
+    corrected_vector : np.ndarray
+        The orthonormal vector that is orthogonal to all vectors in basis_list.
+    """
+    
+    # Start with a copy to avoid modifying the original input (eigVec)
+    v = new_vector.copy() 
+    
+    # Perform the Gram-Schmidt subtraction (Projection Subtraction)
+    for u in basis_list:
+        # u is assumed to be an orthonormal vector from the previous steps.
+        # Projection: proj_u(v) = (v . u) * u
+        
+        # Calculate the scalar projection length (inner product)
+        scalar_projection = np.dot(v, u)
+        
+        # Subtract the projection
+        v = v - (scalar_projection * u)
+        
+    # Final step: Normalize the resulting orthogonal vector
+    norm_v = np.linalg.norm(v)
+    
+    # Handle the case where the vector is near-zero (linearly dependent)
+    if norm_v < 1e-12: 
+        # Return a zero vector, which simplifies the rank-k reconstruction
+        return np.zeros_like(new_vector)
+    else:
+        # Return the final orthonormal vector
+        return v / norm_v
+    
 # =========================================================
 # Simple self-test on the example data
 # =========================================================
