@@ -194,8 +194,42 @@ def lda_train(X, y):
     threshold : float
         Threshold in 1D projected space for classifying 0 vs 1.
     """
-    # TODO: implement two-class LDA training
-    raise NotImplementedError("lda_train not implemented")
+    # Let's seperate the data
+    X0 = X[y == 0]
+    X1 = X[y == 1]
+
+    # I want the mean across all the samples...
+    mu0 = np.mean(X0,axis=0)
+    mu1 = np.mean(X1,axis=0)
+    deltaMu = mu1 - mu0
+
+    # Center the matrices...
+    C0 = X0 - mu0
+    C1 = X1 - mu1
+
+    # Compute the scatter...
+    S0 = C0.T@C0
+    S1 = C1.T@C1
+    Sw = S0+S1
+
+    # I might need to use a custom solver here... 
+    # Maybe even a pseudo-inverse... jesus christ...
+    # For now just use linalg... TODO: Fix this... see Tychnoff Regularization??
+    # Again some linear algebra calls.... might be bad...
+    det = np.linalg.det(Sw)
+    singular = (np.abs(det) < 1e-9)
+    if singular:
+        w = np.linalg.pinv(Sw) @ deltaMu
+    else:
+        w = np.linalg.solve(Sw,deltaMu)
+
+    # And now we can project...
+    p0 = np.dot(w,mu0)
+    p1 = np.dot(w,mu1)
+    threshold = (p0 + p1)/2
+
+    return w,threshold
+    # raise NotImplementedError("lda_train not implemented")
 
 
 # =========================================================
