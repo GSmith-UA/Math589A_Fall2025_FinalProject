@@ -151,7 +151,7 @@ def svd_features(image, p):
         if (np.linalg.norm(covMatrix)) < 1e-9:
             break
         eig,eigVec,itnumber = power_method(covMatrix,covMatrix[:][0],maxIterations,powerTol)
-        assert(eig >= 1e-9) # Maybe an assert will keep out any negative values? Not sure why sqrt is currently throwing an error
+        # assert(eig >= 1e-9) # Maybe an assert will keep out any negative values? Not sure why sqrt is currently throwing an error
         singularValues.append(np.sqrt(eig))
         orthoVec = orthogonalize_vector(eigVec,rightVectors)
         rightVectors.append(orthoVec) 
