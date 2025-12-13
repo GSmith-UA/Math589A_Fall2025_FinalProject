@@ -253,8 +253,14 @@ def lda_predict(X, w, threshold):
     y_pred : (N,) ndarray
         Predicted labels (0 or 1).
     """
-    # TODO: implement LDA prediction
-    raise NotImplementedError("lda_predict not implemented")
+    N = np.size(X)[0]
+    # We can compute all the projections using matrix mult
+    Z = X@w # Z should be Nx1
+    # Loop through and check... pre-filled with zeros so just fill in the needed ones
+    y_pred = (Z >= threshold).astype(int) # Slick idea if it can work...
+    
+    return y_pred
+    # raise NotImplementedError("lda_predict not implemented")
 
 # =========================================================
 # 6. orthog checking...
