@@ -181,11 +181,11 @@ def svd_features(image, p):
             r_95 = i+1
             r_95set = True
 
-    feat = normalizeSigmas[:p]
+    feat = normalizeSigmas[(missingValues - p):missingValues] # Update here... only focus on the minute singular values
     useW = False
     if useW:
         #### TEST BLOCK ####
-        alpha = 1.0
+        alpha = 30.0
         linearWeights = np.linspace(0,1,num=p)
         W = 1 + alpha*linearWeights
         feat = feat*W
@@ -193,7 +193,7 @@ def svd_features(image, p):
 
     feat = np.concatenate((feat,np.array([r_9])))
     feat = np.concatenate((feat,np.array([r_95])))
-
+    print("R values...", r_9, r_95)
     return feat
 
     # raise NotImplementedError("svd_features not implemented")
@@ -344,7 +344,8 @@ def _example_run():
     This function is for local testing only and will NOT be called by the autograder.
     """
     try:
-        data = np.load("project_data_example.npz")
+        # data = np.load("project_data_example.npz")
+        data = np.load("project_data.npz")
     except OSError:
         print("No example data file 'project_data_example.npz' found.")
         return
@@ -354,25 +355,25 @@ def _example_run():
     X_test = data["X_test"]
     y_test = data["y_test"]
 
-    # #################################REMOVE
-    # N_TEST_SAMPLES = 100 # Define the number of images you want to use
+    #################################REMOVE
+    N_TEST_SAMPLES = 100 # Define the number of images you want to use
     
-    # # Subset Training Data (using the first N_TEST_SAMPLES images)
-    # X_train = X_train[:N_TEST_SAMPLES]
-    # y_train = y_train[:N_TEST_SAMPLES]
+    # Subset Training Data (using the first N_TEST_SAMPLES images)
+    X_train = X_train[:N_TEST_SAMPLES]
+    y_train = y_train[:N_TEST_SAMPLES]
     
-    # # Subset Testing Data (using the first N_TEST_SAMPLES images)
-    # X_test = X_test[:N_TEST_SAMPLES]
-    # y_test = y_test[:N_TEST_SAMPLES]
-    # #################################REMOVE
-    # print(f"--- Running Test with Subset of {N_TEST_SAMPLES} samples per set ---")
+    # Subset Testing Data (using the first N_TEST_SAMPLES images)
+    X_test = X_test[:N_TEST_SAMPLES]
+    y_test = y_test[:N_TEST_SAMPLES]
+    #################################REMOVE
+    print(f"--- Running Test with Subset of {N_TEST_SAMPLES} samples per set ---")
 
 
     # Sanity check shapes
     print("X_train shape:", X_train.shape)
     print("X_test shape:", X_test.shape)
 
-    p = min(5, min(X_train.shape[1], X_train.shape[2]))
+    p = min(16, min(X_train.shape[1], X_train.shape[2]))
     print(f"Using p = {p} leading singular values for features.")
 
     # Build feature matrices
