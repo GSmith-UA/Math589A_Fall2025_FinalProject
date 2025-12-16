@@ -138,7 +138,6 @@ def svd_features(image, p):
     m,n = np.shape(image)
     covMatrix = image.T@image
     E_total = np.linalg.trace(covMatrix) # This is equiv to frobenius norm squared
-
     singularValues = []
     rightVectors = []
 
@@ -168,20 +167,36 @@ def svd_features(image, p):
 
     r_9 = maxRank
     r_95 = maxRank
+    r_98 = maxRank
+    r_99 = maxRank
+    r_999 = maxRank
     r_9set = False
     r_95set = False
+    r_98set = False
+    r_99set = False
+    r_999set = False
     runningEnergyTotal = 0
     for i in range(0,maxRank):
         runningEnergyTotal += singularValues[i]**2
         energyRatio = runningEnergyTotal/E_total
-        if (energyRatio > 0.98) and not(r_9set):
+        if (energyRatio > 0.9) and not(r_9set):
             r_9 = i+1
             r_9set = True
-        if (r_9set) and (energyRatio > 0.99) and not(r_95set):
+        if (energyRatio > 0.95) and not(r_95set):
             r_95 = i+1
             r_95set = True
+        if (energyRatio > 0.98) and not(r_98set):
+            r_98 = i+1
+            r_98set = True
+        if (energyRatio > 0.99) and not(r_99set):
+            r_99 = i+1
+            r_99set = True
+        if (energyRatio > 0.999) and not(r_999set):
+            r_999 = i+1
+            r_999set = True
 
     feat = normalizeSigmas[(missingValues - p):missingValues] # Update here... only focus on the minute singular values
+    
     useW = False
     if useW:
         #### TEST BLOCK ####
@@ -191,9 +206,8 @@ def svd_features(image, p):
         feat = feat*W
         #### TESTBLOCK ####
 
-    feat = np.concatenate((feat,np.array([r_9])))
-    feat = np.concatenate((feat,np.array([r_95])))
-    print("R values...", r_9, r_95)
+    feat = np.concatenate((feat,np.array([r_9,r_95,r_98,r_99,r_999])))
+    # feat = np.concatenate((feat,np.array([r_95])))
     return feat
 
     # raise NotImplementedError("svd_features not implemented")
